@@ -1,0 +1,37 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --brand-primary: #0C4A60;
+    --brand-dark: #003244;
+    --text-primary: #0F172A;
+    --text-secondary: #1E293B;
+  }
+
+  body {
+    @apply bg-slate-100 text-content-primary antialiased;
+    font-family: 'Plus Jakarta Sans', 'Noto Sans Devanagari', -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Devanagari font priority when Marathi class applied */
+  .font-devanagari {
+    font-family: 'Noto Sans Devanagari', 'Plus Jakarta Sans', sans-serif;
+  }
+}
+
+/* Subtle fade highlight animation for realtime changes */
+@keyframes realtimeFade {
+  0% {
+    background-color: #fef08a;
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.animate-value-change {
+  animation: realtimeFade 0.8s ease-out;
+}

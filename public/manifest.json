@@ -1,0 +1,16 @@
+{
+  "short_name": "MediFlow+",
+  "name": "MediFlow+ Rural Health App",
+  "icons": [
+    {
+      "src": "logo.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192 512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#0C4A60",
+  "theme_color": "#0C4A60",
+  "display": "standalone",
+  "orientation": "portrait"
+}
