@@ -25,6 +25,16 @@ export const appointmentsService = {
     return store.appointmentSlots.filter((s) => s.phcId === phcId && s.date === date);
   },
 
+  getAvailableDates(phcId: string): string[] {
+    return Array.from(
+      new Set(
+        store.appointmentSlots
+          .filter((slot) => slot.phcId === phcId && slot.booked < slot.capacity)
+          .map((slot) => slot.date),
+      ),
+    ).sort();
+  },
+
   book_appointment(
     phcId: string,
     date: string,

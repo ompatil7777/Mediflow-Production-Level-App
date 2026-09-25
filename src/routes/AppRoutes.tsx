@@ -24,6 +24,7 @@ import { NearbyPHCs } from '../pages/patient/NearbyPHCs';
 import { SymptomCheck } from '../pages/patient/SymptomCheck';
 import { MedicineStock } from '../pages/patient/MedicineStock';
 import { MyHealth } from '../pages/patient/MyHealth';
+import { BookAppointment } from '../pages/patient/BookAppointment';
 
 // Temporary Role Placeholder until next stage build
 const RoleComingSoon: React.FC<{ roleName: string; nextScreen: string }> = ({
@@ -85,7 +86,7 @@ export const AppRoutes: React.FC = () => {
         />
         <Route
           path="/patient/book-appointment"
-          element={<RoleComingSoon roleName="Patient" nextScreen="Book Appointment" />}
+          element={<BookAppointment />}
         />
         <Route path="/patient/nearby-phcs" element={<NearbyPHCs />} />
         <Route path="/patient/symptom-check" element={<SymptomCheck />} />
