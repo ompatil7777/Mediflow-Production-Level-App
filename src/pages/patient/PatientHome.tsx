@@ -9,6 +9,7 @@ import { MOCK_PHCS, INITIAL_INVENTORY, MOCK_PATIENTS, MOCK_APPOINTMENTS } from '
 const patient = MOCK_PATIENTS[0]; // Ramesh Patil, MF-P-0001, Shivapur
 const phc = MOCK_PHCS[0]; // PHC Shivapur
 const appointment = MOCK_APPOINTMENTS.find(a => a.patientId === patient.id);
+const metformin = INITIAL_INVENTORY.find(item => item.medicineId === 'med-2');
 
 export const PatientHome: React.FC = () => {
   const navigate = useNavigate();
@@ -101,8 +102,13 @@ export const PatientHome: React.FC = () => {
             <h2 className="text-[17px] font-bold text-content-primary">
               {lang('My Appointment', 'माझी भेट')}
             </h2>
-            <p className="text-sm text-content-secondary">
-              {lang('Today 10:30 AM with Dr. Anita Deshmukh', 'आज सकाळी १०:३० डॉ. अनिता देशमुख')}
+              <p className="text-sm text-content-secondary">
+               {appointment
+                 ? lang(
+                     `${appointment.date} ${appointment.time} with Dr. Anita Deshmukh`,
+                     `${appointment.date} ${appointment.time} डॉ. अनिता देशमुख`,
+                   )
+                 : lang('No appointment booked', 'भेटीची नोंद नाही')}
             </p>
           </div>
           <div className="bg-brand text-white px-2.5 py-1.5 rounded text-right">
@@ -212,8 +218,8 @@ export const PatientHome: React.FC = () => {
             </div>
           </div>
           <div className="text-right">
-            <span className="text-[17px] font-bold text-status-low">84 units</span>
-            <p className="text-xs text-content-muted">at PHC Shivapur</p>
+             <span className="text-[17px] font-bold text-status-low">{metformin?.currentStock ?? 0} units</span>
+             <p className="text-xs text-content-muted">{phc.name}</p>
           </div>
         </div>
       </section>

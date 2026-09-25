@@ -19,6 +19,7 @@ import { StaffSignIn } from '../pages/auth/StaffSignIn';
 import { DemoRolePicker } from '../pages/auth/DemoRolePicker';
 import { Settings } from '../pages/auth/Settings';
 import { SignOutConfirmation } from '../pages/auth/SignOutConfirmation';
+import { PatientHome } from '../pages/patient/PatientHome';
 
 // Temporary Role Placeholder until next stage build
 const RoleComingSoon: React.FC<{ roleName: string; nextScreen: string }> = ({
@@ -68,7 +69,7 @@ export const AppRoutes: React.FC = () => {
         {/* Temporary Role Dashboards for Testing navigation */}
         <Route
           path="/patient/home"
-          element={<RoleComingSoon roleName="Patient" nextScreen="Patient Home" />}
+          element={<PatientHome />}
         />
         <Route
           path="/patient/medicines"
