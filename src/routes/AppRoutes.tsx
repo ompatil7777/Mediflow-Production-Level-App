@@ -25,25 +25,10 @@ import { SymptomCheck } from '../pages/patient/SymptomCheck';
 import { MedicineStock } from '../pages/patient/MedicineStock';
 import { MyHealth } from '../pages/patient/MyHealth';
 import { BookAppointment } from '../pages/patient/BookAppointment';
-
-// Temporary Role Placeholder until next stage build
-const RoleComingSoon: React.FC<{ roleName: string; nextScreen: string }> = ({
-  roleName,
-  nextScreen,
-}) => (
-  <div className="p-6 bg-white rounded-[6px] border-[1.5px] border-surface-border text-center my-6">
-    <div className="w-12 h-12 rounded-full bg-brand/10 text-brand flex items-center justify-center mx-auto mb-3 font-bold text-lg">
-      ✓
-    </div>
-    <h2 className="text-lg font-bold text-content-primary">{roleName} View Ready for Review</h2>
-    <p className="text-xs text-content-secondary mt-1">
-      Current screen: <span className="font-semibold text-brand">{nextScreen}</span>
-    </p>
-    <p className="text-xs text-content-muted mt-3">
-      Auth/entry screens and system foundation are fully initialized. Proceeding to Patient role screens upon your approval.
-    </p>
-  </div>
-);
+import { HealthWorkerDashboard } from '../pages/health-worker/HealthWorkerDashboard';
+import { PharmacistInventory } from '../pages/pharmacist/PharmacistInventory';
+import { DistrictOverview } from '../pages/authority/DistrictOverview';
+import { SupplyDashboard } from '../pages/supply/SupplyDashboard';
 
 export const AppRoutes: React.FC = () => {
   return (
@@ -93,19 +78,19 @@ export const AppRoutes: React.FC = () => {
 
         <Route
           path="/health-worker/dashboard"
-          element={<RoleComingSoon roleName="Health Worker" nextScreen="HW Dashboard" />}
+          element={<HealthWorkerDashboard />}
         />
         <Route
           path="/pharmacist/inventory"
-          element={<RoleComingSoon roleName="Pharmacist" nextScreen="Pharmacist Inventory" />}
+          element={<PharmacistInventory />}
         />
         <Route
           path="/district/overview"
-          element={<RoleComingSoon roleName="District Health Office" nextScreen="District Overview" />}
+          element={<DistrictOverview />}
         />
         <Route
           path="/supply/dashboard"
-          element={<RoleComingSoon roleName="Supply Depot" nextScreen="Supply Dashboard" />}
+          element={<SupplyDashboard />}
         />
       </Route>
 
