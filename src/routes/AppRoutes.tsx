@@ -30,6 +30,9 @@ import { HealthWorkerPatients } from '../pages/health-worker/HealthWorkerPatient
 import { HealthWorkerQueue } from '../pages/health-worker/HealthWorkerQueue';
 import { HealthWorkerRecordReading } from '../pages/health-worker/HealthWorkerRecordReading';
 import { PharmacistInventory } from '../pages/pharmacist/PharmacistInventory';
+import { PharmacistRequests } from '../pages/pharmacist/PharmacistRequests';
+import { PharmacistDemand } from '../pages/pharmacist/PharmacistDemand';
+import { PharmacistHistory } from '../pages/pharmacist/PharmacistHistory';
 import { DistrictOverview } from '../pages/authority/DistrictOverview';
 import { SupplyDashboard } from '../pages/supply/SupplyDashboard';
 
@@ -98,6 +101,18 @@ export const AppRoutes: React.FC = () => {
         <Route
           path="/pharmacist/inventory"
           element={<PharmacistInventory />}
+        />
+        <Route
+          path="/pharmacist/create-request"
+          element={<PharmacistRequests />}
+        />
+        <Route
+          path="/pharmacist/demand"
+          element={<PharmacistDemand />}
+        />
+        <Route
+          path="/pharmacist/history"
+          element={<PharmacistHistory />}
         />
         <Route
           path="/district/overview"
