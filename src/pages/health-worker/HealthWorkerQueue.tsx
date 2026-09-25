@@ -58,11 +58,10 @@ export const HealthWorkerQueue: React.FC = () => {
   const completedAppointments = sortedAppointments.filter((a) => a.status === 'completed' || a.status === 'cancelled');
 
   const counts = useMemo(() => {
-    const total = sortedAppointments.length;
     const waiting = sortedAppointments.filter((a) => a.status === 'booked').length;
     const inProgress = sortedAppointments.filter((a) => a.status === 'checked_in' || a.status === 'consultation').length;
     const done = sortedAppointments.filter((a) => a.status === 'completed').length;
-    return { total, waiting, inProgress, done };
+    return { waiting, inProgress, done };
   }, [sortedAppointments]);
 
   return (
