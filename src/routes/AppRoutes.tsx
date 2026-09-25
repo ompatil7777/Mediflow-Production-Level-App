@@ -26,6 +26,9 @@ import { MedicineStock } from '../pages/patient/MedicineStock';
 import { MyHealth } from '../pages/patient/MyHealth';
 import { BookAppointment } from '../pages/patient/BookAppointment';
 import { HealthWorkerDashboard } from '../pages/health-worker/HealthWorkerDashboard';
+import { HealthWorkerPatients } from '../pages/health-worker/HealthWorkerPatients';
+import { HealthWorkerQueue } from '../pages/health-worker/HealthWorkerQueue';
+import { HealthWorkerRecordReading } from '../pages/health-worker/HealthWorkerRecordReading';
 import { PharmacistInventory } from '../pages/pharmacist/PharmacistInventory';
 import { DistrictOverview } from '../pages/authority/DistrictOverview';
 import { SupplyDashboard } from '../pages/supply/SupplyDashboard';
@@ -79,6 +82,18 @@ export const AppRoutes: React.FC = () => {
         <Route
           path="/health-worker/dashboard"
           element={<HealthWorkerDashboard />}
+        />
+        <Route
+          path="/health-worker/patients"
+          element={<HealthWorkerPatients />}
+        />
+        <Route
+          path="/health-worker/appointments"
+          element={<HealthWorkerQueue />}
+        />
+        <Route
+          path="/health-worker/record-reading"
+          element={<HealthWorkerRecordReading />}
         />
         <Route
           path="/pharmacist/inventory"
