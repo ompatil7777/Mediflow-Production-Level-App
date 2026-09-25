@@ -20,6 +20,10 @@ import { DemoRolePicker } from '../pages/auth/DemoRolePicker';
 import { Settings } from '../pages/auth/Settings';
 import { SignOutConfirmation } from '../pages/auth/SignOutConfirmation';
 import { PatientHome } from '../pages/patient/PatientHome';
+import { NearbyPHCs } from '../pages/patient/NearbyPHCs';
+import { SymptomCheck } from '../pages/patient/SymptomCheck';
+import { MedicineStock } from '../pages/patient/MedicineStock';
+import { MyHealth } from '../pages/patient/MyHealth';
 
 // Temporary Role Placeholder until next stage build
 const RoleComingSoon: React.FC<{ roleName: string; nextScreen: string }> = ({
@@ -73,16 +77,18 @@ export const AppRoutes: React.FC = () => {
         />
         <Route
           path="/patient/medicines"
-          element={<RoleComingSoon roleName="Patient" nextScreen="Medicine Stock" />}
+          element={<MedicineStock />}
         />
         <Route
           path="/patient/my-health"
-          element={<RoleComingSoon roleName="Patient" nextScreen="My Health" />}
+          element={<MyHealth />}
         />
         <Route
           path="/patient/book-appointment"
           element={<RoleComingSoon roleName="Patient" nextScreen="Book Appointment" />}
         />
+        <Route path="/patient/nearby-phcs" element={<NearbyPHCs />} />
+        <Route path="/patient/symptom-check" element={<SymptomCheck />} />
 
         <Route
           path="/health-worker/dashboard"
