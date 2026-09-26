@@ -171,7 +171,7 @@ export const DistrictApprovals: React.FC = () => {
             ) : (
               <div className="flex flex-col gap-2">
                 {pendingRequests.map((req) => {
-                  const ps = priorityStyles[req.priority];
+                  const ps = priorityStyles[req.priority] || priorityStyles.normal;
                   return (
                     <div key={req.id} className="p-4 bg-white border-[1.5px] border-surface-border rounded-[6px]">
                       <div className="flex items-start justify-between gap-3">
@@ -234,7 +234,7 @@ export const DistrictApprovals: React.FC = () => {
             ) : (
               <div className="flex flex-col gap-2">
                 {decidedRequests.map((req) => {
-                  const ps = priorityStyles[req.priority];
+                  const ps = priorityStyles[req.priority] || priorityStyles.normal;
                   return (
                     <div key={req.id} className="p-3 bg-white border-[1.5px] border-surface-border rounded-[6px]">
                       <div className="flex items-start justify-between gap-2">
