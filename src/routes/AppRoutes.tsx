@@ -34,6 +34,10 @@ import { PharmacistRequests } from '../pages/pharmacist/PharmacistRequests';
 import { PharmacistDemand } from '../pages/pharmacist/PharmacistDemand';
 import { PharmacistHistory } from '../pages/pharmacist/PharmacistHistory';
 import { DistrictOverview } from '../pages/authority/DistrictOverview';
+import { DistrictPHCs } from '../pages/authority/DistrictPHCs';
+import { DistrictApprovals } from '../pages/authority/DistrictApprovals';
+import { DistrictDemand } from '../pages/authority/DistrictDemand';
+import { DistrictAuditTrail } from '../pages/authority/DistrictAuditTrail';
 import { SupplyDashboard } from '../pages/supply/SupplyDashboard';
 
 export const AppRoutes: React.FC = () => {
@@ -117,6 +121,22 @@ export const AppRoutes: React.FC = () => {
         <Route
           path="/district/overview"
           element={<DistrictOverview />}
+        />
+        <Route
+          path="/district/taluka-map"
+          element={<DistrictPHCs />}
+        />
+        <Route
+          path="/district/approvals"
+          element={<DistrictApprovals />}
+        />
+        <Route
+          path="/district/demand"
+          element={<DistrictDemand />}
+        />
+        <Route
+          path="/district/audit-trail"
+          element={<DistrictAuditTrail />}
         />
         <Route
           path="/supply/dashboard"
