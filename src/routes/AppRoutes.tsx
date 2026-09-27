@@ -39,6 +39,8 @@ import { DistrictApprovals } from '../pages/authority/DistrictApprovals';
 import { DistrictDemand } from '../pages/authority/DistrictDemand';
 import { DistrictAuditTrail } from '../pages/authority/DistrictAuditTrail';
 import { SupplyDashboard } from '../pages/supply/SupplyDashboard';
+import { SupplyOrders } from '../pages/supply/SupplyOrders';
+import { SupplyWarehouseStock } from '../pages/supply/SupplyWarehouseStock';
 
 export const AppRoutes: React.FC = () => {
   return (
@@ -141,6 +143,14 @@ export const AppRoutes: React.FC = () => {
         <Route
           path="/supply/dashboard"
           element={<SupplyDashboard />}
+        />
+        <Route
+          path="/supply/orders"
+          element={<SupplyOrders />}
+        />
+        <Route
+          path="/supply/warehouse-stock"
+          element={<SupplyWarehouseStock />}
         />
       </Route>
 
