@@ -27,21 +27,22 @@ export const HealthWorkerDashboard: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
 
-  const loadDashboard = () => {
+  const loadDashboard = async () => {
     setIsLoading(true);
     setHasError(false);
     try {
       const phc = appointmentsService.getPhc(phcId);
       if (!phc) throw new Error('PHC not found');
 
-      const patients = readingsService.getPatients(phcId);
+      const patients = await readingsService.getPatients(phcId);
       const patientIds = new Set(patients.map((patient) => patient.id));
-      const readings = readingsService.getReadings().filter((reading) => patientIds.has(reading.patientId));
+      const allReadings = await readingsService.getReadings();
+      const readings = allReadings.filter((reading) => patientIds.has(reading.patientId));
 
       setData({
         phc,
         patients,
-        appointments: appointmentsService.getAppointments(phcId),
+        appointments: await appointmentsService.getAppointments(phcId),
         readings,
       });
     } catch {

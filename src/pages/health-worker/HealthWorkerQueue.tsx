@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { CalendarDays, CheckCircle2, ClipboardList, Clock3 } from 'lucide-react';
 import { appointmentsService } from '../../services/appointments';
+import { supabase } from '../../lib/supabase';
 import { Appointment } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -21,6 +22,24 @@ const statusStyles: Record<Appointment['status'], { bg: string; border: string; 
   cancelled: { bg: 'bg-[#FEF2F2]', border: 'border-[#DC2626]', text: 'text-[#DC2626]', labelEn: 'Cancelled', labelMr: 'रद्द' },
 };
 
+function mapAppointmentFromPayload(row: Record<string, unknown>): Appointment {
+  return {
+    id: row.id as string,
+    phcId: row.phc_id as string,
+    phcName: row.phc_name as string,
+    phcNameMr: row.phc_name_mr as string,
+    patientId: row.patient_id as string,
+    patientName: row.patient_name as string,
+    tokenNo: row.token_no as number,
+    date: row.date as string,
+    time: row.time as string,
+    careType: row.care_type as string,
+    careTypeMr: row.care_type_mr as string,
+    status: row.status as Appointment['status'],
+    createdAt: row.created_at as string,
+  };
+}
+
 export const HealthWorkerQueue: React.FC = () => {
   const { user } = useAuth();
   const { getBilingual } = useLanguage();
@@ -30,11 +49,12 @@ export const HealthWorkerQueue: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
 
-  const loadQueue = () => {
+  const loadQueue = async () => {
     setIsLoading(true);
     setHasError(false);
     try {
-      setAppointments(appointmentsService.getAppointments(phcId));
+      const data = await appointmentsService.getAppointments(phcId);
+      setAppointments(data);
     } catch {
       setHasError(true);
     } finally {
@@ -42,8 +62,46 @@ export const HealthWorkerQueue: React.FC = () => {
     }
   };
 
+  // Initial load
   useEffect(() => {
     loadQueue();
+  }, [phcId]);
+
+  // Realtime: new appointments booked by a Patient appear live in the queue
+  useEffect(() => {
+    const channel = supabase
+      .channel(`hw-queue-${phcId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'appointments',
+          filter: `phc_id=eq.${phcId}`,
+        },
+        (payload) => {
+          const newApt = mapAppointmentFromPayload(payload.new as Record<string, unknown>);
+          setAppointments((prev) => [newApt, ...prev]);
+        },
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'appointments',
+          filter: `phc_id=eq.${phcId}`,
+        },
+        (payload) => {
+          const updated = mapAppointmentFromPayload(payload.new as Record<string, unknown>);
+          setAppointments((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [phcId]);
 
   const sortedAppointments = useMemo(() => {
@@ -107,8 +165,8 @@ export const HealthWorkerQueue: React.FC = () => {
             <EmptyState
               titleEn="Queue is clear"
               titleMr="रांग रिकामी आहे"
-              descEn="There are no appointments in the saved queue."
-              descMr="जतन केलेल्या रांगेत भेटी नाहीत."
+              descEn="There are no appointments in the queue. New bookings will appear here live."
+              descMr="रांगेत भेटी नाहीत. नव्या बुकिंग येथे थेट दिसतील."
               icon={CalendarDays}
             />
           ) : (

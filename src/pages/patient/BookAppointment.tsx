@@ -55,7 +55,7 @@ export const BookAppointment: React.FC = () => {
   const [hasError, setHasError] = useState(false);
   const [isBooking, setIsBooking] = useState(false);
 
-  const loadBookingData = () => {
+  const loadBookingData = async () => {
     setIsLoading(true);
     setHasError(false);
     try {
@@ -64,7 +64,7 @@ export const BookAppointment: React.FC = () => {
         throw new Error('Assigned PHC was not found');
       }
 
-      const dates = appointmentsService.getAvailableDates(phcId);
+      const dates = await appointmentsService.getAvailableDates(phcId);
       setPhc(nextPhc);
       setAvailableDates(dates);
       setSelectedDate((current) => (current && dates.includes(current) ? current : dates[0] || ''));
@@ -86,17 +86,20 @@ export const BookAppointment: React.FC = () => {
       return;
     }
 
-    try {
-      const nextSlots = appointmentsService
-        .getSlots(phcId, selectedDate)
-        .filter((slot) => slot.booked < slot.capacity);
-      setSlots(nextSlots);
-      setSelectedSlotId((current) =>
-        nextSlots.some((slot) => slot.id === current) ? current : nextSlots[0]?.id || '',
-      );
-    } catch {
-      setHasError(true);
-    }
+    const fetchSlots = async () => {
+      try {
+        const nextSlots = (await appointmentsService.getSlots(phcId, selectedDate)).filter(
+          (slot) => slot.booked < slot.capacity,
+        );
+        setSlots(nextSlots);
+        setSelectedSlotId((current) =>
+          nextSlots.some((slot) => slot.id === current) ? current : nextSlots[0]?.id || '',
+        );
+      } catch {
+        setHasError(true);
+      }
+    };
+    fetchSlots();
   }, [phcId, selectedDate]);
 
   const selectedSlot = useMemo(
@@ -111,13 +114,13 @@ export const BookAppointment: React.FC = () => {
     phc.status !== 'consulting' ||
     isBooking;
 
-  const bookAppointment = () => {
+  const bookAppointment = async () => {
     if (isBookingDisabled || !selectedSlot || !phc) return;
 
     setIsBooking(true);
     try {
       const careType = careTypes[selectedCareType];
-      const created = appointmentsService.book_appointment(
+      const created = await appointmentsService.book_appointment(
         phc.id,
         selectedSlot.date,
         selectedSlot.time,

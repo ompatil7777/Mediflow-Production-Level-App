@@ -51,14 +51,14 @@ export const HealthWorkerRecordReading: React.FC = () => {
   const [saveError, setSaveError] = useState(false);
   const [confirmation, setConfirmation] = useState<HealthReading | null>(null);
 
-  const loadPage = () => {
+  const loadPage = async () => {
     setIsLoading(true);
     setHasError(false);
     try {
-      const pats = readingsService.getPatients(phcId);
+      const pats = await readingsService.getPatients(phcId);
       setPatients(pats);
       setSelectedPatientId((cur) => (cur && pats.some((p) => p.id === cur) ? cur : pats[0]?.id || ''));
-      setRecentReadings(readingsService.getReadings());
+      setRecentReadings(await readingsService.getReadings());
     } catch {
       setHasError(true);
     } finally {
@@ -91,7 +91,7 @@ export const HealthWorkerRecordReading: React.FC = () => {
     return g > 0 && g < 1000;
   }, [selectedPatientId, readingType, systolic, diastolic, glucose]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!isFormValid || !selectedPatient) return;
     setIsSaving(true);
     setSaveError(false);
@@ -128,9 +128,9 @@ export const HealthWorkerRecordReading: React.FC = () => {
         };
       }
 
-      const created = readingsService.record_reading(partial);
+      const created = await readingsService.record_reading(partial);
       setConfirmation(created);
-      setRecentReadings(readingsService.getReadings());
+      setRecentReadings(await readingsService.getReadings());
       setSystolic('');
       setDiastolic('');
       setGlucose('');

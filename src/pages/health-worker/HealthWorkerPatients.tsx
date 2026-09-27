@@ -25,12 +25,12 @@ export const HealthWorkerPatients: React.FC = () => {
   const [search, setSearch] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const loadPatients = () => {
+  const loadPatients = async () => {
     setIsLoading(true);
     setHasError(false);
     try {
-      setPatients(readingsService.getPatients(phcId));
-      setAllReadings(readingsService.getReadings());
+      setPatients(await readingsService.getPatients(phcId));
+      setAllReadings(await readingsService.getReadings());
     } catch {
       setHasError(true);
     } finally {

@@ -2,8 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Activity, ArrowLeft, HeartPulse, Plus, UserRound } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { readingsService } from '../../services/readings';
-import { HealthReading } from '../../types';
-import { MOCK_PATIENTS } from '../../data/mockData';
+import { supabase } from '../../lib/supabase';
+import { HealthReading, Patient } from '../../types';
 import { useLanguage } from '../../context/LanguageContext';
 import { BilingualText } from '../../components/common/BilingualText';
 import { Button } from '../../components/common/Button';
@@ -12,7 +12,8 @@ import { ErrorState } from '../../components/common/ErrorState';
 import { LoadingSkeleton } from '../../components/common/LoadingSkeleton';
 import { PatientOfflineNotice } from '../../components/patient/PatientOfflineNotice';
 
-const patient = MOCK_PATIENTS[0];
+// Default demo patient id — matches the logged-in patient demo profile
+const PATIENT_ID = 'MF-P-0001';
 
 const formatDate = (value: string) =>
   new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(value));
@@ -20,15 +21,21 @@ const formatDate = (value: string) =>
 export const MyHealth: React.FC = () => {
   const navigate = useNavigate();
   const { getBilingual } = useLanguage();
+  const [patient, setPatient] = useState<Patient | undefined>();
   const [readings, setReadings] = useState<HealthReading[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
 
-  const loadReadings = () => {
+  const loadReadings = async () => {
     setIsLoading(true);
     setHasError(false);
     try {
-      setReadings(readingsService.getReadings(patient.id));
+      const [pat, rds] = await Promise.all([
+        readingsService.getPatient(PATIENT_ID),
+        readingsService.getReadings(PATIENT_ID),
+      ]);
+      setPatient(pat);
+      setReadings(rds);
     } catch {
       setHasError(true);
     } finally {
@@ -36,8 +43,47 @@ export const MyHealth: React.FC = () => {
     }
   };
 
+  // Initial load
   useEffect(() => {
     loadReadings();
+  }, []);
+
+  // Realtime subscription: new readings for this patient appear instantly
+  useEffect(() => {
+    const channel = supabase
+      .channel(`my-health-readings-${PATIENT_ID}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'health_readings',
+          filter: `patient_id=eq.${PATIENT_ID}`,
+        },
+        (payload) => {
+          const row = payload.new as Record<string, unknown>;
+          const newReading: HealthReading = {
+            id: row.id as string,
+            patientId: row.patient_id as string,
+            type: row.type as HealthReading['type'],
+            systolic: row.systolic as number | undefined,
+            diastolic: row.diastolic as number | undefined,
+            glucose: row.glucose as number | undefined,
+            readingType: row.reading_type as HealthReading['readingType'],
+            statusLabel: row.status_label as string,
+            statusLabelMr: row.status_label_mr as string,
+            recordedBy: row.recorded_by as string,
+            recordedRole: row.recorded_role as HealthReading['recordedRole'],
+            recordedAt: row.recorded_at as string,
+          };
+          setReadings((prev) => [newReading, ...prev]);
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const latestReadings = useMemo(() => {
@@ -67,25 +113,27 @@ export const MyHealth: React.FC = () => {
 
       <PatientOfflineNotice />
 
-      <section className="p-4 bg-white border-[1.5px] border-surface-border rounded-[6px]">
-        <div className="flex items-start gap-3">
-          <div className="w-11 h-11 rounded-full bg-brand/10 text-brand flex items-center justify-center flex-shrink-0">
-            <UserRound className="w-6 h-6" />
+      {patient && (
+        <section className="p-4 bg-white border-[1.5px] border-surface-border rounded-[6px]">
+          <div className="flex items-start gap-3">
+            <div className="w-11 h-11 rounded-full bg-brand/10 text-brand flex items-center justify-center flex-shrink-0">
+              <UserRound className="w-6 h-6" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-content-primary">
+                {getBilingual(patient.fullName, patient.fullNameMr).primary}
+              </h2>
+              <p className="text-sm text-content-secondary">
+                {patient.id} · {getBilingual(patient.villageName, patient.villageNameMr).primary}
+              </p>
+              <p className="text-sm text-content-secondary mt-1">
+                {getBilingual('Care at ', 'नियुक्त केंद्र: ').primary}
+                {getBilingual(patient.assignedPhcName, patient.assignedPhcNameMr).primary}
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-base font-bold text-content-primary">
-              {getBilingual(patient.fullName, patient.fullNameMr).primary}
-            </h2>
-            <p className="text-sm text-content-secondary">
-              {patient.id} · {getBilingual(patient.villageName, patient.villageNameMr).primary}
-            </p>
-            <p className="text-sm text-content-secondary mt-1">
-              {getBilingual('Care at ', 'नियुक्त केंद्र: ').primary}
-              {getBilingual(patient.assignedPhcName, patient.assignedPhcNameMr).primary}
-            </p>
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {isLoading && <LoadingSkeleton rows={4} />}
 
