@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { readingsService } from '../../services/readings';
 import { supabase } from '../../lib/supabase';
 import { HealthReading, Patient } from '../../types';
+import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { BilingualText } from '../../components/common/BilingualText';
 import { Button } from '../../components/common/Button';
@@ -21,6 +22,8 @@ const formatDate = (value: string) =>
 export const MyHealth: React.FC = () => {
   const navigate = useNavigate();
   const { getBilingual } = useLanguage();
+  const { user } = useAuth();
+  const PATIENT_ID = user.patientId || 'MF-P-0001';
   const [patient, setPatient] = useState<Patient | undefined>();
   const [readings, setReadings] = useState<HealthReading[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -46,7 +49,7 @@ export const MyHealth: React.FC = () => {
   // Initial load
   useEffect(() => {
     loadReadings();
-  }, []);
+  }, [PATIENT_ID]);
 
   // Realtime subscription: new readings for this patient appear instantly
   useEffect(() => {
@@ -84,7 +87,7 @@ export const MyHealth: React.FC = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [PATIENT_ID]);
 
   const latestReadings = useMemo(() => {
     const latestBp = readings.find((reading) => reading.type === 'bp');

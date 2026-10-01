@@ -53,13 +53,14 @@ export const BookAppointment: React.FC = () => {
   const [confirmation, setConfirmation] = useState<Appointment | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [bookingError, setBookingError] = useState<string | null>(null);
   const [isBooking, setIsBooking] = useState(false);
 
   const loadBookingData = async () => {
     setIsLoading(true);
     setHasError(false);
     try {
-      const nextPhc = appointmentsService.getPhc(phcId);
+      const nextPhc = await appointmentsService.getPhc(phcId);
       if (!nextPhc) {
         throw new Error('Assigned PHC was not found');
       }
@@ -118,6 +119,7 @@ export const BookAppointment: React.FC = () => {
     if (isBookingDisabled || !selectedSlot || !phc) return;
 
     setIsBooking(true);
+    setBookingError(null);
     try {
       const careType = careTypes[selectedCareType];
       const created = await appointmentsService.book_appointment(
@@ -130,8 +132,9 @@ export const BookAppointment: React.FC = () => {
         user.fullName,
       );
       setConfirmation(created);
-    } catch {
-      setHasError(true);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unable to book the appointment. Please try again.';
+      setBookingError(message);
     } finally {
       setIsBooking(false);
     }
@@ -241,6 +244,17 @@ export const BookAppointment: React.FC = () => {
       {isLoading && <LoadingSkeleton rows={4} />}
 
       {!isLoading && hasError && <ErrorState onRetry={loadBookingData} />}
+
+      {!isLoading && !hasError && bookingError && (
+        <div className="p-3 bg-[#FEF2F2] border-2 border-[#DC2626] rounded-[6px]">
+          <p className="text-sm font-semibold text-[#DC2626]">
+            {getBilingual('Booking Failed', 'बुकिंग अयशस्वी').primary}
+          </p>
+          <p className="text-xs text-[#991B1B] mt-1">
+            {getBilingual(bookingError, 'बुकिंग करता आली नाही. पुन्हा प्रयत्न करा.').primary}
+          </p>
+        </div>
+      )
 
       {!isLoading && !hasError && phc && (
         <>

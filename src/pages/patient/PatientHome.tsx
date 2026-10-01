@@ -1,20 +1,57 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../../context/LanguageContext';
-import { MOCK_PHCS, INITIAL_INVENTORY, MOCK_PATIENTS, MOCK_APPOINTMENTS } from '../../data/mockData';
-
-// Stitch: Patient Home screen b7b0c2d8a6a046bfb0d53d6c0167d01f
-// 5 cards max on dashboard: My PHC, My Appointment, Check Symptoms, Medicine Stock, My Health
-
-const patient = MOCK_PATIENTS[0]; // Ramesh Patil, MF-P-0001, Shivapur
-const phc = MOCK_PHCS[0]; // PHC Shivapur
-const appointment = MOCK_APPOINTMENTS.find(a => a.patientId === patient.id);
-const metformin = INITIAL_INVENTORY.find(item => item.medicineId === 'med-2');
+import { useAuth } from '../../context/AuthContext';
+import { appointmentsService } from '../../services/appointments';
+import { readingsService } from '../../services/readings';
+import { Appointment, HealthReading, PHC } from '../../types';
+import { MOCK_PHCS, INITIAL_INVENTORY } from '../../data/mockData';
 
 export const PatientHome: React.FC = () => {
   const navigate = useNavigate();
   const { language } = useLanguage();
+  const { user } = useAuth();
   const lang = (en: string, mr: string) => language === 'mr' ? mr : en;
+
+  const patientId = user.patientId || 'MF-P-0001';
+  const phcId = user.phcId || 'phc-shivapur';
+
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [phc, setPhc] = useState<PHC | undefined>();
+  const [readings, setReadings] = useState<HealthReading[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [apts, phcData, rds] = await Promise.all([
+          appointmentsService.getAppointments(undefined, patientId),
+          appointmentsService.getPhc(phcId),
+          readingsService.getReadings(patientId),
+        ]);
+        setAppointments(apts);
+        setPhc(phcData);
+        setReadings(rds);
+      } catch {
+        // fallback to mock data for offline display
+        setPhc(MOCK_PHCS.find(p => p.id === phcId));
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, [patientId, phcId]);
+
+  const latestAppointment = appointments
+    .filter(a => a.status !== 'cancelled' && a.status !== 'completed')
+    .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))[0];
+
+  const latestBp = readings.find(r => r.type === 'bp');
+  const latestSugar = readings.find(r => r.type === 'sugar');
+
+  const phcName = phc?.name || user.phcName || 'PHC Shivapur';
+  const phcNameMr = phc?.nameMr || 'प्रा. आ. केंद्र शिवापूर';
+  const metformin = INITIAL_INVENTORY.find(item => item.medicineId === 'med-2');
 
   return (
     <div className="flex flex-col gap-3 pb-4">
@@ -25,23 +62,23 @@ export const PatientHome: React.FC = () => {
           <div>
             {language === 'mr' ? (
               <>
-                <h1 className="text-[18px] font-bold text-content-primary">नमस्ते, रमेश पाटील</h1>
-                <p className="text-sm text-content-secondary">Namaste, Ramesh Patil</p>
+                <h1 className="text-[18px] font-bold text-content-primary">{user.fullNameMr}</h1>
+                <p className="text-sm text-content-secondary">{user.fullName}</p>
               </>
             ) : (
               <>
-                <h1 className="text-[18px] font-bold text-content-primary">Namaste, Ramesh Patil</h1>
-                <p className="text-sm text-content-secondary">नमस्ते, रमेश पाटील</p>
+                <h1 className="text-[18px] font-bold text-content-primary">{user.fullName}</h1>
+                <p className="text-sm text-content-secondary">{user.fullNameMr}</p>
               </>
             )}
           </div>
           <span className="inline-flex items-center px-2 py-1 bg-surface-well text-brand text-xs font-bold rounded border border-surface-border">
-            MF-P-0001
+            {patientId}
           </span>
         </div>
         <div className="mt-2 pt-2 border-t border-surface-border flex items-center gap-1.5 text-content-secondary text-sm">
           <span className="material-symbols-outlined text-brand text-[16px]">location_on</span>
-          <span>{lang('Your village: Shivapur', 'तुमचे गाव: शिवापूर')}</span>
+          <span>{lang('Your PHC', 'तुमचे केंद्र')}: {lang(phcName, phcNameMr)}</span>
         </div>
       </section>
 
@@ -54,7 +91,7 @@ export const PatientHome: React.FC = () => {
               {lang('My PHC', 'माझे प्रा.आ.केंद्र')}
             </h2>
             <p className="text-[15px] font-semibold text-content-primary">
-              {lang(phc.name, phc.nameMr)}
+              {lang(phcName, phcNameMr)}
             </p>
           </div>
           <div className="flex items-center gap-1 bg-status-available-bg border border-green-200 px-2.5 py-1 rounded text-status-available min-h-[32px]">
@@ -62,32 +99,19 @@ export const PatientHome: React.FC = () => {
             <span className="text-xs font-semibold">{lang('Consulting Now', 'तपासणी सुरू')}</span>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-2 bg-surface-well p-2 rounded border border-surface-border mb-3">
-          <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-brand text-[20px]">groups</span>
-            <div>
-              <p className="text-[15px] font-bold text-content-primary">9 waiting</p>
-              <p className="text-xs text-content-muted">९ प्रतीक्षेत</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 border-l border-surface-border pl-2">
-            <span className="material-symbols-outlined text-status-available text-[20px]">event_seat</span>
-            <div>
-              <p className="text-[15px] font-bold text-content-primary">6 slots left</p>
-              <p className="text-xs text-content-muted">६ स्लॉट शिल्लक</p>
-            </div>
-          </div>
-        </div>
         <div className="grid grid-cols-2 gap-2">
-          {/* PHC phone shown as plain text — no call button per spec */}
-          <div className="min-h-[48px] px-2 bg-surface-well border border-surface-border text-content-secondary text-sm font-medium rounded flex items-center justify-center gap-1.5">
-            <span className="material-symbols-outlined text-[18px]">call</span>
-            <span>108</span>
-          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/patient/book-appointment')}
+            className="min-h-[48px] px-2 bg-white border-2 border-brand text-brand text-sm font-semibold rounded flex items-center justify-center gap-1.5 active:bg-surface-well"
+          >
+            <span className="material-symbols-outlined text-[18px]">event</span>
+            <span>{lang('Book Appointment', 'भेट निश्चित करा')}</span>
+          </button>
           <button
             type="button"
             onClick={() => navigate('/patient/nearby-phcs')}
-            className="min-h-[48px] px-2 bg-white border-2 border-brand text-brand text-sm font-semibold rounded flex items-center justify-center gap-1.5 active:bg-surface-well"
+            className="min-h-[48px] px-2 bg-surface-well border border-surface-border text-brand text-sm font-semibold rounded flex items-center justify-center gap-1.5 active:bg-surface-ground"
           >
             <span className="material-symbols-outlined text-[18px]">directions</span>
             <span>{lang('Directions', 'दिशा')}</span>
@@ -95,75 +119,60 @@ export const PatientHome: React.FC = () => {
         </div>
       </section>
 
-      {/* CARD 2: My Appointment */}
+      {/* CARD 2: My Appointments */}
       <section className="bg-white border border-surface-border rounded p-4">
         <div className="flex justify-between items-start mb-3">
           <div>
             <h2 className="text-[17px] font-bold text-content-primary">
-              {lang('My Appointment', 'माझी भेट')}
+              {lang('My Appointments', 'माझ्या भेटी')}
             </h2>
-              <p className="text-sm text-content-secondary">
-               {appointment
-                 ? lang(
-                     `${appointment.date} ${appointment.time} with Dr. Anita Deshmukh`,
-                     `${appointment.date} ${appointment.time} डॉ. अनिता देशमुख`,
-                   )
-                 : lang('No appointment booked', 'भेटीची नोंद नाही')}
-            </p>
-          </div>
-          <div className="bg-brand text-white px-2.5 py-1.5 rounded text-right">
-            <span className="text-[11px] block font-medium leading-tight">
-              {lang('Token', 'टोकन')}
-            </span>
-            <span className="text-[17px] font-bold">#08</span>
           </div>
         </div>
 
-        {/* 4-step appointment progress tracker */}
-        <div className="py-2 my-1 border-y border-surface-border">
-          <div className="relative flex items-center justify-between">
-            {/* connector line */}
-            <div className="absolute left-0 top-4 w-full h-1 bg-surface-border z-0"></div>
-            <div className="absolute left-0 top-4 w-1/3 h-1 bg-status-available z-0"></div>
-
-            {/* Step 1: Booked — Done */}
-            <div className="relative z-10 flex flex-col items-center bg-white px-1">
-              <div className="w-8 h-8 rounded-full bg-status-available text-white flex items-center justify-center border-2 border-status-available">
-                <span className="material-symbols-outlined text-[16px]" style={{fontVariationSettings: "'FILL' 1"}}>check</span>
-              </div>
-              <span className="text-[11px] text-content-muted mt-1">{lang('Booked', 'बुकिंग')}</span>
-            </div>
-
-            {/* Step 2: Checked In — Current */}
-            <div className="relative z-10 flex flex-col items-center bg-white px-1">
-              <div className="w-8 h-8 rounded-full bg-brand text-white flex items-center justify-center border-2 border-brand ring-2 ring-brand/30">
-                <span className="material-symbols-outlined text-[16px]">how_to_reg</span>
-              </div>
-              <span className="text-[11px] text-brand font-bold mt-1">{lang('Checked In', 'आलात')}</span>
-            </div>
-
-            {/* Step 3: Consultation — Pending */}
-            <div className="relative z-10 flex flex-col items-center bg-white px-1">
-              <div className="w-8 h-8 rounded-full bg-surface-well text-content-muted flex items-center justify-center border-2 border-surface-border">
-                <span className="material-symbols-outlined text-[16px]">stethoscope</span>
-              </div>
-              <span className="text-[11px] text-content-muted mt-1">{lang('Consult', 'सल्ला')}</span>
-            </div>
-
-            {/* Step 4: Done — Pending */}
-            <div className="relative z-10 flex flex-col items-center bg-white px-1">
-              <div className="w-8 h-8 rounded-full bg-surface-well text-content-muted flex items-center justify-center border-2 border-surface-border">
-                <span className="material-symbols-outlined text-[16px]">task_alt</span>
-              </div>
-              <span className="text-[11px] text-content-muted mt-1">{lang('Done', 'पूर्ण')}</span>
-            </div>
+        {loading ? (
+          <p className="text-sm text-content-muted">{lang('Loading appointments...', 'भेटी लोड होत आहेत...')}</p>
+        ) : appointments.length === 0 ? (
+          <p className="text-sm text-content-secondary">
+            {lang('No appointments booked yet.', 'अद्याप भेटीची नोंद नाही.')}
+          </p>
+        ) : (
+          <div className="flex flex-col divide-y divide-surface-border">
+            {appointments
+              .sort((a, b) => b.date.localeCompare(a.date) || b.time.localeCompare(a.time))
+              .slice(0, 3)
+              .map((apt) => (
+                <div key={apt.id} className="py-2 first:pt-0 last:pb-0 flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-content-primary">
+                      {apt.date} · {apt.time}
+                    </p>
+                    <p className="text-xs text-content-secondary mt-0.5">
+                      {lang(apt.careType, apt.careTypeMr)}
+                    </p>
+                    <p className="text-xs text-content-muted mt-0.5">
+                      {lang(apt.phcName, apt.phcNameMr)}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold px-2 py-1 rounded border border-[#D97706] bg-[#FFFBEB] text-[#D97706]">
+                      {lang('Booked', 'बुकिंग')}
+                    </span>
+                    <span className="bg-brand text-white px-2 py-1 rounded text-xs font-bold">
+                      #{apt.tokenNo}
+                    </span>
+                  </div>
+                </div>
+              ))}
           </div>
-        </div>
+        )}
 
-        <p className="text-sm text-content-secondary mt-2 flex items-center gap-1.5">
-          <span className="material-symbols-outlined text-status-available text-[18px]">info</span>
-          {lang('Please wait in Waiting Hall 1.', 'प्रतिक्षा कक्ष १ मध्ये थांबा.')}
-        </p>
+        <button
+          type="button"
+          onClick={() => navigate('/patient/book-appointment')}
+          className="w-full mt-3 min-h-[44px] bg-brand text-white text-sm font-semibold rounded flex items-center justify-center gap-1.5 active:opacity-90"
+        >
+          <span>{lang('Book New Appointment →', 'नवीन भेट निश्चित करा →')}</span>
+        </button>
       </section>
 
       {/* CARD 3: Check Symptoms */}
@@ -219,7 +228,7 @@ export const PatientHome: React.FC = () => {
           </div>
           <div className="text-right">
              <span className="text-[17px] font-bold text-status-low">{metformin?.currentStock ?? 0} units</span>
-             <p className="text-xs text-content-muted">{phc.name}</p>
+             <p className="text-xs text-content-muted">{phcName}</p>
           </div>
         </div>
       </section>
@@ -236,31 +245,34 @@ export const PatientHome: React.FC = () => {
           <span className="material-symbols-outlined text-brand text-[24px]">favorite</span>
         </div>
         <div className="grid grid-cols-2 gap-2 mb-3">
-          {/* Blood Pressure */}
           <div className="p-2 bg-surface-well rounded border border-surface-border">
             <span className="text-xs text-content-muted block">{lang('Blood Pressure', 'रक्तदाब')}</span>
             <div className="flex items-baseline gap-1 my-1">
-              <span className="text-[17px] font-bold text-content-primary">122/80</span>
+              <span className="text-[17px] font-bold text-content-primary">
+                {latestBp ? `${latestBp.systolic}/${latestBp.diastolic}` : '—'}
+              </span>
               <span className="text-xs text-content-muted">mmHg</span>
             </div>
-            <span className="inline-block px-1.5 py-0.5 bg-green-100 text-green-800 text-[11px] font-bold rounded">Normal</span>
+            {latestBp && (
+              <span className="inline-block px-1.5 py-0.5 bg-green-100 text-green-800 text-[11px] font-bold rounded">
+                {lang(latestBp.statusLabel, latestBp.statusLabelMr)}
+              </span>
+            )}
           </div>
-          {/* Fasting Sugar */}
           <div className="p-2 bg-surface-well rounded border border-surface-border">
             <span className="text-xs text-content-muted block">{lang('Fasting Sugar', 'साखर')}</span>
             <div className="flex items-baseline gap-1 my-1">
-              <span className="text-[17px] font-bold text-content-primary">110</span>
+              <span className="text-[17px] font-bold text-content-primary">
+                {latestSugar ? latestSugar.glucose : '—'}
+              </span>
               <span className="text-xs text-content-muted">mg/dL</span>
             </div>
-            <span className="inline-block px-1.5 py-0.5 bg-green-100 text-green-800 text-[11px] font-bold rounded">Normal</span>
+            {latestSugar && (
+              <span className="inline-block px-1.5 py-0.5 bg-green-100 text-green-800 text-[11px] font-bold rounded">
+                {lang(latestSugar.statusLabel, latestSugar.statusLabelMr)}
+              </span>
+            )}
           </div>
-        </div>
-        <div className="pt-2 border-t border-surface-border flex items-center justify-between text-xs text-content-muted">
-          <span className="flex items-center gap-1">
-            <span className="material-symbols-outlined text-[14px]">verified_user</span>
-            {lang('Checked 3 days ago', '३ दिवसांपूर्वी तपासले')}
-          </span>
-          <span className="font-semibold text-content-secondary">ASHA: Sunita Gaikwad</span>
         </div>
         <button
           type="button"

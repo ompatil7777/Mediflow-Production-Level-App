@@ -33,22 +33,60 @@ function mapAppointment(row: Record<string, unknown>): Appointment {
   };
 }
 
+function mapPhc(row: Record<string, unknown>): PHC {
+  return {
+    id: row.id as string,
+    name: row.name as string,
+    nameMr: row.name_mr as string,
+    status: row.status as PhcStatus,
+    statusReason: (row.status_reason as string) || undefined,
+    statusReasonMr: (row.status_reason_mr as string) || undefined,
+    doctorName: row.doctor_name as string,
+    doctorNameMr: row.doctor_name_mr as string,
+    hwName: row.hw_name as string,
+    pharmacistName: row.pharmacist_name as string,
+    phone: row.phone as string,
+    lat: row.lat as number,
+    lng: row.lng as number,
+    taluka: row.taluka as string,
+    district: row.district as string,
+    openingHours: row.opening_hours as string,
+    openingHoursMr: row.opening_hours_mr as string,
+    assignedVillages: (row.assigned_villages as string[]) || [],
+    updatedAt: row.updated_at as string,
+  };
+}
+
 // ---------- service ----------
 
 export const appointmentsService = {
-  // PHC data still lives in the in-memory store (not yet in Supabase)
-  getPhcs(): PHC[] {
-    return store.phcs;
+  // ── PHC reads from Supabase ──────────────────────────────────────
+
+  async getPhcs(): Promise<PHC[]> {
+    const { data, error } = await supabase.from('phcs').select('*').order('name');
+    if (error) throw error;
+    return (data ?? []).map((r) => mapPhc(r as Record<string, unknown>));
   },
 
-  getPhc(id: string): PHC | undefined {
-    return store.phcs.find((p) => p.id === id);
+  async getPhc(id: string): Promise<PHC | undefined> {
+    const { data, error } = await supabase
+      .from('phcs')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+    if (error) throw error;
+    return data ? mapPhc(data as Record<string, unknown>) : undefined;
   },
 
   // ── Supabase reads ──────────────────────────────────────────────
 
   async getAppointments(phcId?: string, patientId?: string): Promise<Appointment[]> {
-    let query = supabase.from('appointments').select('*').order('date').order('time').order('token_no');
+    let query = supabase
+      .from('appointments')
+      .select('*')
+      .order('date')
+      .order('time')
+      .order('token_no');
     if (phcId) query = query.eq('phc_id', phcId);
     if (patientId) query = query.eq('patient_id', patientId);
 
@@ -97,7 +135,7 @@ export const appointmentsService = {
     patientId: string,
     patientName: string,
   ): Promise<Appointment> {
-    // 1. Find the slot
+    // 1. Find the slot for this PHC + date + time
     const { data: slotData, error: slotFetchErr } = await supabase
       .from('appointment_slots')
       .select('*')
@@ -109,16 +147,62 @@ export const appointmentsService = {
     if (slotFetchErr) throw slotFetchErr;
 
     const slot = slotData ? mapSlot(slotData as Record<string, unknown>) : null;
-    const tokenNo = slot ? slot.booked + 1 : 1;
 
-    // 2. Look up phcName from in-memory store (PHC table not yet in Supabase)
-    const phc = store.phcs.find((p) => p.id === phcId) || store.phcs[0];
+    // 2. Check for duplicate booking (same patient, same PHC, same date, same time)
+    const { data: existing } = await supabase
+      .from('appointments')
+      .select('id')
+      .eq('patient_id', patientId)
+      .eq('phc_id', phcId)
+      .eq('date', date)
+      .eq('time', time)
+      .neq('status', 'cancelled')
+      .maybeSingle();
 
-    // 3. Insert appointment
+    if (existing) {
+      throw new Error('You already have an appointment at this time. Please choose a different slot.');
+    }
+
+    // 3. Check slot capacity
+    if (slot && slot.booked >= slot.capacity) {
+      throw new Error('This time slot is fully booked. Please choose a different time.');
+    }
+
+    // 4. Find the health worker assigned to this slot's PHC
+    const { data: hwData, error: hwErr } = await supabase
+      .from('health_workers')
+      .select('id')
+      .eq('phc_id', phcId)
+      .limit(1)
+      .maybeSingle();
+
+    if (hwErr) throw hwErr;
+
+    const healthWorkerId = hwData?.id || null;
+
+    // 5. Look up PHC name from database
+    const phc = await this.getPhc(phcId);
+    if (!phc) throw new Error('PHC not found');
+    if (phc.status !== 'consulting') {
+      throw new Error('This PHC is not currently accepting appointments.');
+    }
+
+    // 6. Calculate token number (count existing appointments for this PHC + date + 1)
+    const { count: existingCount } = await supabase
+      .from('appointments')
+      .select('id', { count: 'exact', head: true })
+      .eq('phc_id', phcId)
+      .eq('date', date)
+      .neq('status', 'cancelled');
+
+    const tokenNo = (existingCount ?? 0) + 1;
+
+    // 7. Insert appointment
     const { data: aptRow, error: aptErr } = await supabase
       .from('appointments')
       .insert({
         phc_id: phcId,
+        health_worker_id: healthWorkerId,
         phc_name: phc.name,
         phc_name_mr: phc.nameMr,
         patient_id: patientId,
@@ -129,14 +213,19 @@ export const appointmentsService = {
         care_type: careType,
         care_type_mr: careTypeMr,
         status: 'booked',
-        created_at: new Date().toISOString(),
       })
       .select()
       .single();
 
-    if (aptErr) throw aptErr;
+    if (aptErr) {
+      // Check for unique constraint violation (duplicate booking)
+      if (aptErr.code === '23505') {
+        throw new Error('This slot has just been booked. Please choose a different time.');
+      }
+      throw aptErr;
+    }
 
-    // 4. Increment slot.booked
+    // 8. Increment slot.booked atomically
     if (slot) {
       await supabase
         .from('appointment_slots')
@@ -147,7 +236,7 @@ export const appointmentsService = {
     return mapAppointment(aptRow as Record<string, unknown>);
   },
 
-  // PHC status still uses in-memory store
+  // PHC status still uses in-memory store (live status toggle)
   set_phc_status(phcId: string, status: PhcStatus, reason?: string, reasonMr?: string): void {
     store.set_phc_status(phcId, status, reason, reasonMr);
   },
